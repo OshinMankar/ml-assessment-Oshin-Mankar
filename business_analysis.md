@@ -73,8 +73,61 @@ Key EDA analyses I would run:
 2) Seasonality and time-trends:
    a) Plot: time-series of monthly items sold across all stores, with lines coloured by promotion type.
    b) Check for peaks around festivals or specific months.
-   c) This supports the inclusion of month-of-year, qua
+   c) This supports the inclusion of month-of-year, quarter, and festival flags as features, and helps identify whether some months should be treated as special cases.
 
+3) Store-level heterogeneity:
+   a) Plot: box-plots of items sold per store under each promotion, grouped by store size or footfall.
+   b) Identify "outlier" stores that respond very strongly or very weakly to promotions.
+   c) This supports hierarchical or cluster-based modelling, and may flag stores that need special handling.
+
+4) Feature correlations and multicollinearity:
+   a) Plot: a correlation matrix or heatmap of numeric features
+   b) Check for highly correlated variables that might cause instability.
+   c) This guides feature selection and the choice of regularised models (like Ridge/Lasso or tree-based models).
+
+# B1 (c)
+
+If 80% of transactions happen without any promotion, the data is heavily skewed toward the "no promotion" condition, which might bias the model to treat "no promotion" as the default and under-estimate the value of running promotions.
+
+**Potential issues:**
+1) The model may not learn robust patterns for less-frequent promotions.
+2) Promotion-month effects can be noisy or hard to estimate due to small sample size.
+
+**How to Address this:**
+1) Stratified sampling by promotion status: ensure that each promotion (including "no promotion") is adequately represented in training and validation.
+2) Weighting or oversampling: assign higher weights to promotion-month observations, or synthetically increase the number of promotion-month samples.
+3) Baseline and increment model: model baseline demand (no promotion) separately and then model the incremental uplift from each promotion. This isolates the promotion effect and makes better use of the relatively rare promotion-only-data.
+
+# B3: Model Evaluation and Deployment:
+
+# B3 (a) Train-test split and metrics:
+
+Using a random split across rows is inappropriate here because the data is time-dependent and store-specific. Randomly mixing early and late months would let the model "see" future patterns during training, which would artificially inflate performance.
+
+**Better approach:**
+  a) Use a time-based split: train on the first 24-30 months and hold out the last 6-12 months for testing.
+  b) Ensure each store's history is kept clean in either training or test, not split across both.
+
+**Metrics and their interpretation:**
+| Metric | What it tells us in the context |
+|---|---|
+| MAE (Mean Absolute Error) | How far off, on average, the model's predicted items sold are from the actual number.|
+| RMSE (Root Mean Squared Error) | Penalises large mistakes more heavily, useful if big-over or under-predictions are costly.|
+| R-squared | How much of the variation in items sold the model explains, helps compare different model designs.|
+| Promotion-choice accuracy | The percentage of times the model's recommended promotion actually was the best-performing one in the test set.|
+
+In practice, lower MAE/RMSE and higher promotion-choice accuracy mean the model is likely to give more reliable guidance about which promotion to run.
+
+# B3 (b) 
+If the model recommends Loyalty Points Bonus in December and Flat Discount in March for Store 12, the explanation usually lies in different underlying conditions between those two months.
+
+Using feature importance:
+1) Examine how features like month, is_festival, footfall, and promo_type contribute to the predicted items sold in December vs. March
+2) For example, in December, the festival effect combined with the loyalty-bonus structure might generate a strong uplift, while in March that effect disappears and a straightforward Flat Discount works better.
+
+Communicating this to the marketing team:
+1) Show a side-by-side visual comparing the two months for store 12.
+2) Explain simply: "In the festive month, customers respond more to loyalty-style rewards, so the model picks Loyalty Points Bonus. In a quieter month like March, a sample discount drives more volume, so the model switches to Flat Discount."
 
 
 
