@@ -40,7 +40,7 @@ These strategies are more realistic because they recognise the same Flat Discoun
 
 # B2 - Data and EDA Strategy
 
-# B1 (a) 
+# B2 (a) 
 
 **Data:**
 1) transactions
@@ -61,7 +61,7 @@ These strategies are more realistic because they recognise the same Flat Discoun
 1) Aggregate transaction-level data up to the store-month-promotion level.
 2) Compute averages for store-level features (e.g., average footfall per month) and encode time effects (month, quarter, festival month). This makes the dataset ready for regression or ranking-style modelling.
 
-# B1 (b) 
+# B2 (b) 
 
 Key EDA analyses I would run:
 
@@ -85,7 +85,7 @@ Key EDA analyses I would run:
    b) Check for highly correlated variables that might cause instability.
    c) This guides feature selection and the choice of regularised models (like Ridge/Lasso or tree-based models).
 
-# B1 (c)
+# B2 (c)
 
 If 80% of transactions happen without any promotion, the data is heavily skewed toward the "no promotion" condition, which might bias the model to treat "no promotion" as the default and under-estimate the value of running promotions.
 
@@ -129,6 +129,38 @@ Communicating this to the marketing team:
 1) Show a side-by-side visual comparing the two months for store 12.
 2) Explain simply: "In the festive month, customers respond more to loyalty-style rewards, so the model picks Loyalty Points Bonus. In a quieter month like March, a sample discount drives more volume, so the model switches to Flat Discount."
 
+# B3 (c)
+To deploy the model so it can generate monthly recommendations without retraining each time, follow this end-to-end process:
+
+**1) Model training and saving:**
+a) Train the model on the curated store-month-promotion dataset and save it using a standard format
+b) Store associated metadata alongside the model.
+
+**2) New monthly data pipeline:**
+At the start of each month, for all 50 stores:
+a) Ingest the latest transactions, store_attributes, promotion_details, and calendar data.
+b) Apply the same feature engineering pipeline(grain = store month-promotion, aggregations, feature interactions) as used in training.
+c) Ensure the new data is aligned with the model's expected features set and scaling.
+
+**3) Scoring and recommendation:**
+a) For each store and each of the five possible promotions for the upcoming month, score the expected items sold using the saved model.
+b) Select the promotion with the highest predicted items sold for each store and output a recommendation table (store_id, month, recommended_promo_type, predicted_items_sold).
+
+**4) Monitoring and re-training triggers:**
+a) Performance monitoring:
+i) Track actual vs. predicted items sold for each store-month and aggregate error metrics(MAE, RMSE) over time.
+ii) Monitor promotion-choice accuracy by comparing the model's recommended promotion with the actual best-performing one in hold-out or recent months.
+
+b) Drift detection:
+Monitor feature-level drift(e.g., footfall, competition density) and distribution shift in target (items sold) using statistical tests or monitoring tools.
+
+c) Retraining triggers:
+Retrain when:
+i) Average MAE/RMSE increases beyond a threshold over a moving window (e.g., last 3 months)
+ii) Feature-drift tests indicate significant structural change.
+iii) Business rules change(e.g., mew promotion types are introduced)
+
+This setup lets the model run automatically each month, adapt over time, and remain aligned with real-world store behaviour without manual restraining every cycle.
 
 
 
